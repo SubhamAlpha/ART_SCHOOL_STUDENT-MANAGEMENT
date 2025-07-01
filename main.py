@@ -7,6 +7,7 @@ import os
 from datetime import datetime
 import re
 from certificate import generate_certificates_from_excel
+from Admitcard import open_admit_card_window
 
 EXCEL_FILE = 'student_data.xlsx'
 
@@ -22,13 +23,12 @@ class StudentApp:
             'Name', 'Father Name', 'Address', 'Subject', 'Year',
             'Date of Birth', 'Sex', 'Phone Number'
         )
-        self.student_data = []  # Raw data from Excel
-        self.filtered_data = []  # Data after filtering/sorting
+        self.student_data = []
         self.sort_column = None
         self.sort_reverse = False
         self.column_filters = {col: "" for col in self.columns}
 
-        # UI Setup
+        # UI setup
         self.create_menu()
         self.create_form()
         self.create_buttons()
@@ -65,7 +65,7 @@ Date of Birth, Sex, Phone Number.
 -----------------------
 - Select a student from the table.
 - Click "Generate Admit Card" to create a PDF admit card.
-- You can choose a custom save location if needed.
+- This will open a new window for advanced admit card generation.
 
 3. Generating Certificates
 -------------------------
@@ -82,7 +82,7 @@ Date of Birth, Sex, Phone Number.
 5. Exporting Records
 -------------------
 - Click "Export Records" to save the student data to CSV or Excel.
-  (Only filtered/visible data will be exported.)
+- Only filtered/visible data will be exported.
 
 6. Help and Documentation
 ------------------------
@@ -220,7 +220,7 @@ Date of Birth, Sex, Phone Number.
     def update_treeview(self):
         """Update Treeview with filtered and sorted data"""
         self.tree.delete(*self.tree.get_children())
-        self.filtered_data = []
+        filtered_data = []
         for row in self.student_data:
             match = True
             for i, col in enumerate(self.columns):
@@ -229,11 +229,11 @@ Date of Birth, Sex, Phone Number.
                     match = False
                     break
             if match:
-                self.filtered_data.append(row)
+                filtered_data.append(row)
         if self.sort_column is not None:
             col_index = self.columns.index(self.sort_column)
-            self.filtered_data.sort(key=lambda x: str(x[col_index]), reverse=self.sort_reverse)
-        for row in self.filtered_data:
+            filtered_data.sort(key=lambda x: str(x[col_index]), reverse=self.sort_reverse)
+        for row in filtered_data:
             self.tree.insert("", "end", values=row)
 
     def show_filter_dialog(self):
@@ -266,11 +266,13 @@ Date of Birth, Sex, Phone Number.
                 entry.grid(row=i, column=1, padx=5, pady=5, sticky="ew")
                 entry.insert(0, self.column_filters[col])
             filter_entries[col] = entry
+
         def apply_filters():
             for col in self.columns:
                 self.column_filters[col] = filter_entries[col].get()
             self.update_treeview()
             filter_dialog.destroy()
+
         def clear_filters():
             for col in self.columns:
                 if col in ('Subject', 'Year', 'Sex'):
@@ -280,6 +282,7 @@ Date of Birth, Sex, Phone Number.
             for col in self.columns:
                 self.column_filters[col] = ""
             self.update_treeview()
+
         ttk.Button(filter_dialog, text="Apply", command=apply_filters).grid(
             row=len(self.columns), column=0, padx=5, pady=10, sticky="e"
         )
@@ -351,55 +354,27 @@ Date of Birth, Sex, Phone Number.
             messagebox.showerror("Error", f"Failed to save data: {str(e)}")
 
     def generate_admit_card(self):
-        """Generate PDF admit card from selected data"""
-        selected = self.tree.focus()
-        if not selected:
-            messagebox.showerror("Error", "Please select a record first!")
-            return
-        data = dict(zip(self.columns, self.tree.item(selected)['values']))
-        answer = messagebox.askyesno(
-            "Save Location",
-            f"Default save location is:\n{self.admit_cards_dir}\n\nWould you like to choose a different location?"
-        )
-        if answer:
-            directory = filedialog.askdirectory(title="Select Directory for ADMIT CARDS")
-            if directory:
-                self.admit_cards_dir = os.path.join(directory, "ADMIT CARDS")
-                self.ensure_admit_cards_dir()
-                messagebox.showinfo("Location Set", f"Admit cards will now be saved in:\n{self.admit_cards_dir}")
-        name = data['Name'].replace(' ', '_')
-        filename = f"{name}_admit_Card.pdf"
-        filepath = os.path.join(self.admit_cards_dir, filename)
-        try:
-            c = canvas.Canvas(filepath, pagesize=A4)
-            c.setFont("Helvetica-Bold", 16)
-            c.drawString(100, 800, "ADMIT CARD")
-            c.line(100, 790, 500, 790)
-            c.setFont("Helvetica", 12)
-            y_position = 750
-            for key, value in data.items():
-                c.drawString(100, y_position, f"{key}: {value}")
-                y_position -= 30
-            c.save()
-            messagebox.showinfo("Success", f"Admit card generated as:\n{filepath}")
-        except Exception as e:
-            messagebox.showerror("Error", f"Failed to generate PDF: {str(e)}")
+        """Open the advanced admit card generation window"""
+        open_admit_card_window()
 
     def export_records(self):
         """Export filtered student records to CSV or Excel file"""
-        if not hasattr(self, 'filtered_data') or not self.filtered_data:
+        filtered_rows = []
+        for item in self.tree.get_children():
+            filtered_rows.append(self.tree.item(item)['values'])
+        if not filtered_rows:
             messagebox.showwarning("Warning", "No records to export!")
             return
+        df = pd.DataFrame(filtered_rows, columns=self.columns)
+        filetypes = [("Excel files", "*.xlsx"), ("CSV files", "*.csv")]
+        filename = filedialog.asksaveasfilename(
+            title="Save student records as...",
+            filetypes=filetypes,
+            defaultextension=".xlsx"
+        )
+        if not filename:
+            return  # User canceled
         try:
-            df = pd.DataFrame(self.filtered_data, columns=self.columns)
-            filetypes = [("Excel files", "*.xlsx"), ("CSV files", "*.csv")]
-            filename = filedialog.asksaveasfilename(
-                title="Save student records as...",
-                filetypes=filetypes,
-                defaultextension=".xlsx"
-            )
-            if not filename:
-                return  # User canceled
             if filename.lower().endswith('.csv'):
                 df.to_csv(filename, index=False)
                 messagebox.showinfo("Success", f"Records exported to CSV:\n{filename}")
