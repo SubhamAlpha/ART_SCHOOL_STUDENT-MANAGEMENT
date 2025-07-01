@@ -17,17 +17,18 @@ class StudentApp:
         self.admit_cards_dir = os.path.join(os.getcwd(), "ADMIT CARDS")
         self.ensure_admit_cards_dir()
 
-        # Define columns with new fields
+        # Define columns
         self.columns = (
             'Name', 'Father Name', 'Address', 'Subject', 'Year',
             'Date of Birth', 'Sex', 'Phone Number'
         )
-        self.student_data = []
+        self.student_data = []  # Raw data from Excel
+        self.filtered_data = []  # Data after filtering/sorting
         self.sort_column = None
         self.sort_reverse = False
         self.column_filters = {col: "" for col in self.columns}
 
-        # UI setup
+        # UI Setup
         self.create_menu()
         self.create_form()
         self.create_buttons()
@@ -52,40 +53,41 @@ class StudentApp:
         text = tk.Text(manual, wrap="word", padx=10, pady=10)
         text.pack(fill="both", expand=True)
         manual_text = """
-        Student Data Management - User Manual
+Student Data Management - User Manual
 
-        1. Adding a Student
-        -------------------
-        - Fill in all fields: Name, Father Name, Address, Subject, Year,
-          Date of Birth, Sex, Phone Number.
-        - Click "Submit" to save the student to the database.
+1. Adding a Student
+-------------------
+- Fill in all fields: Name, Father Name, Address, Subject, Year,
+Date of Birth, Sex, Phone Number.
+- Click "Submit" to save the student to the database.
 
-        2. Generating Admit Card
-        -----------------------
-        - Select a student from the table.
-        - Click "Generate Admit Card" to create a PDF admit card.
-        - You can choose a custom save location if needed.
+2. Generating Admit Card
+-----------------------
+- Select a student from the table.
+- Click "Generate Admit Card" to create a PDF admit card.
+- You can choose a custom save location if needed.
 
-        3. Generating Certificates
-        -------------------------
-        - Click "Generate Certificates" to create PDF certificates for all students.
-        - Certificates are saved in the CERTIFICATES folder.
+3. Generating Certificates
+-------------------------
+- Click "Generate Certificates" to create PDF certificates for all students.
+- Certificates are saved in the CERTIFICATES folder.
 
-        4. Filtering and Sorting
-        -----------------------
-        - Click "Filter" to open the filter dialog.
-        - Set filters for any column (Name, Subject, Year, etc.).
-        - Click "Apply" to filter the table, or "Clear" to remove all filters.
-        - Click on any column header to sort by that column.
+4. Filtering and Sorting
+-----------------------
+- Click "Filter" to open the filter dialog.
+- Set filters for any column (Name, Subject, Year, etc.).
+- Click "Apply" to filter the table, or "Clear" to remove all filters.
+- Click on any column header to sort by that column.
 
-        5. Exporting Records
-        -------------------
-        - Click "Export Records" to save the student data to CSV or Excel.
+5. Exporting Records
+-------------------
+- Click "Export Records" to save the student data to CSV or Excel.
+  (Only filtered/visible data will be exported.)
 
-        6. Help and Documentation
-        ------------------------
-        - Use the Help menu for this manual and information about the application.
-        """
+6. Help and Documentation
+------------------------
+- Use the Help menu for this manual and information about the application.
+"""
         text.insert("1.0", manual_text)
         text.config(state="disabled")
 
@@ -94,7 +96,8 @@ class StudentApp:
         messagebox.showinfo(
             "About",
             "Student Data Management\n\n"
-            "A desktop application for managing student records, generating admit cards and certificates.Developed By Subham. Email: nanda.subham.001@gmail.com\n\n"
+            "A desktop application for managing student records, generating admit cards and certificates.\n"
+            "Developed By Subham. Email: nanda.subham.001@gmail.com\n\n"
             "Version 1.0"
         )
 
@@ -112,7 +115,7 @@ class StudentApp:
         """Validate phone number contains only digits and is 10 digits long"""
         if not phone_str.isdigit():
             return False, "Phone Number must contain only digits."
-        if len(phone_str)!= 10:
+        if len(phone_str) != 10:
             return False, "Phone Number must be 10 digits."
         return True, ""
 
@@ -120,10 +123,8 @@ class StudentApp:
         """Create data entry form with new fields and updated dropdowns"""
         form_frame = ttk.LabelFrame(self.root, text="Student Information")
         form_frame.pack(fill="x", padx=10, pady=5)
-
         labels = list(self.columns)
         self.entries = {}
-
         for i, label in enumerate(labels):
             ttk.Label(form_frame, text=f"{label}:").grid(row=i, column=0, padx=5, pady=5, sticky="e")
             if label == 'Subject':
@@ -155,7 +156,6 @@ class StudentApp:
         """Create action buttons with tooltips"""
         btn_frame = ttk.Frame(self.root)
         btn_frame.pack(fill="x", padx=10, pady=5)
-
         buttons = [
             ("Submit", self.submit_data, "Save the current student record"),
             ("Generate Admit Card", self.generate_admit_card, "Generate PDF admit card for selected student"),
@@ -166,7 +166,6 @@ class StudentApp:
             btn = ttk.Button(btn_frame, text=text, command=command)
             btn.pack(side="left", padx=5)
             self.create_tooltip(btn, tooltip)
-
         export_btn = ttk.Button(btn_frame, text="Export Records", command=self.export_records)
         export_btn.pack(side="right", padx=5)
         self.create_tooltip(export_btn, "Export student records to CSV or Excel")
@@ -194,23 +193,19 @@ class StudentApp:
         """Create data display section"""
         data_frame = ttk.LabelFrame(self.root, text="Student Records")
         data_frame.pack(fill="both", expand=True, padx=10, pady=5)
-
         scroll_y = ttk.Scrollbar(data_frame, orient="vertical")
         scroll_x = ttk.Scrollbar(data_frame, orient="horizontal")
         self.tree = ttk.Treeview(data_frame, yscrollcommand=scroll_y.set, xscrollcommand=scroll_x.set)
         scroll_y.config(command=self.tree.yview)
         scroll_x.config(command=self.tree.xview)
-
         self.tree["columns"] = self.columns
         self.tree["show"] = "headings"
         for col in self.columns:
             self.tree.heading(col, text=col, command=lambda c=col: self.sort_tree(c))
             self.tree.column(col, width=120)
-
         self.tree.pack(fill="both", expand=True)
         scroll_y.pack(side="right", fill="y")
         scroll_x.pack(side="bottom", fill="x")
-
         self.load_data()
 
     def load_data(self):
@@ -225,7 +220,7 @@ class StudentApp:
     def update_treeview(self):
         """Update Treeview with filtered and sorted data"""
         self.tree.delete(*self.tree.get_children())
-        filtered_data = []
+        self.filtered_data = []
         for row in self.student_data:
             match = True
             for i, col in enumerate(self.columns):
@@ -234,11 +229,11 @@ class StudentApp:
                     match = False
                     break
             if match:
-                filtered_data.append(row)
+                self.filtered_data.append(row)
         if self.sort_column is not None:
             col_index = self.columns.index(self.sort_column)
-            filtered_data.sort(key=lambda x: str(x[col_index]), reverse=self.sort_reverse)
-        for row in filtered_data:
+            self.filtered_data.sort(key=lambda x: str(x[col_index]), reverse=self.sort_reverse)
+        for row in self.filtered_data:
             self.tree.insert("", "end", values=row)
 
     def show_filter_dialog(self):
@@ -247,7 +242,6 @@ class StudentApp:
         filter_dialog.title("Filter Records")
         filter_dialog.geometry("400x300")
         filter_entries = {}
-
         for i, col in enumerate(self.columns):
             ttk.Label(filter_dialog, text=f"{col}:").grid(row=i, column=0, padx=5, pady=5, sticky="e")
             if col == 'Subject':
@@ -272,13 +266,11 @@ class StudentApp:
                 entry.grid(row=i, column=1, padx=5, pady=5, sticky="ew")
                 entry.insert(0, self.column_filters[col])
             filter_entries[col] = entry
-
         def apply_filters():
             for col in self.columns:
                 self.column_filters[col] = filter_entries[col].get()
             self.update_treeview()
             filter_dialog.destroy()
-
         def clear_filters():
             for col in self.columns:
                 if col in ('Subject', 'Year', 'Sex'):
@@ -288,7 +280,6 @@ class StudentApp:
             for col in self.columns:
                 self.column_filters[col] = ""
             self.update_treeview()
-
         ttk.Button(filter_dialog, text="Apply", command=apply_filters).grid(
             row=len(self.columns), column=0, padx=5, pady=10, sticky="e"
         )
@@ -320,26 +311,22 @@ class StudentApp:
                 data[label] = entry.get()
             else:
                 data[label] = entry.get()
-
         # Check all fields are filled
         if not all(data.values()):
             messagebox.showerror("Error", "All fields are required!")
             return
-
         # Validate Date of Birth
         dob = data.get('Date of Birth', '')
         is_valid_dob, dob_error = self.validate_date(dob)
         if not is_valid_dob:
             messagebox.showerror("Error", dob_error)
             return
-
         # Validate Phone Number
         phone = data.get('Phone Number', '')
         is_valid_phone, phone_error = self.validate_phone(phone)
         if not is_valid_phone:
             messagebox.showerror("Error", phone_error)
             return
-
         try:
             df_new = pd.DataFrame([data])
             try:
@@ -399,13 +386,12 @@ class StudentApp:
             messagebox.showerror("Error", f"Failed to generate PDF: {str(e)}")
 
     def export_records(self):
-        """Export student records to CSV or Excel file"""
+        """Export filtered student records to CSV or Excel file"""
+        if not hasattr(self, 'filtered_data') or not self.filtered_data:
+            messagebox.showwarning("Warning", "No records to export!")
+            return
         try:
-            df = pd.read_excel(EXCEL_FILE)
-            if df.empty:
-                messagebox.showwarning("Warning", "No records to export!")
-                return
-
+            df = pd.DataFrame(self.filtered_data, columns=self.columns)
             filetypes = [("Excel files", "*.xlsx"), ("CSV files", "*.csv")]
             filename = filedialog.asksaveasfilename(
                 title="Save student records as...",
@@ -414,14 +400,12 @@ class StudentApp:
             )
             if not filename:
                 return  # User canceled
-
             if filename.lower().endswith('.csv'):
                 df.to_csv(filename, index=False)
                 messagebox.showinfo("Success", f"Records exported to CSV:\n{filename}")
             else:
                 df.to_excel(filename, index=False)
                 messagebox.showinfo("Success", f"Records exported to Excel:\n{filename}")
-
         except Exception as e:
             messagebox.showerror("Error", f"Failed to export records: {str(e)}")
 
