@@ -4,6 +4,7 @@ import pandas as pd
 from reportlab.lib.pagesizes import A4
 from reportlab.pdfgen import canvas
 import os
+import sys
 from datetime import datetime
 import re
 from certificate import generate_certificates_from_excel
@@ -16,7 +17,9 @@ class StudentApp:
         self.root = root
         self.root.title("SILPITIRTHA SIKSHA NIKETAN")
         self.admit_cards_dir = os.path.join(os.getcwd(), "ADMIT CARDS")
+        self.certificates_dir = os.path.join(os.getcwd(), "CERTIFICATES")
         self.ensure_admit_cards_dir()
+        self.ensure_certificates_dir()
 
         # Define columns
         self.columns = (
@@ -35,15 +38,60 @@ class StudentApp:
         self.create_data_view()
 
     def create_menu(self):
-        """Create menu bar with Help menu as far right as possible"""
+        """Create menu bar with File menu containing requested options"""
         menubar = tk.Menu(self.root)
+        
+        # File menu with vertical popup
         file_menu = tk.Menu(menubar, tearoff=0)
+        file_menu.add_command(label="Admit Cards", command=self.open_admit_cards_folder)
+        file_menu.add_command(label="Certificates", command=self.open_certificates_folder)
+        file_menu.add_separator()
+        file_menu.add_command(label="Help", command=self.show_user_manual)
+        file_menu.add_separator()
+        file_menu.add_command(label="Exit", command=self.root.quit)
         menubar.add_cascade(label="File", menu=file_menu)
+        
+        # Help menu
         help_menu = tk.Menu(menubar, tearoff=0)
         help_menu.add_command(label="User Manual", command=self.show_user_manual)
         help_menu.add_command(label="About", command=self.show_about)
         menubar.add_cascade(label="Help", menu=help_menu)
+        
         self.root.config(menu=menubar)
+
+    def open_admit_cards_folder(self):
+        """Open the admit cards folder in file explorer"""
+        self.open_folder(self.admit_cards_dir)
+
+    def open_certificates_folder(self):
+        """Open the certificates folder in file explorer"""
+        self.open_folder(self.certificates_dir)
+
+    def open_folder(self, folder_path):
+        """Open folder in system file explorer (cross-platform)"""
+        if not os.path.exists(folder_path):
+            os.makedirs(folder_path)
+            messagebox.showinfo("Folder Created", f"Created folder: {folder_path}")
+        
+        try:
+            if sys.platform.startswith('win'):
+                os.startfile(folder_path)
+            elif sys.platform.startswith('darwin'):  # macOS
+                os.system(f'open "{folder_path}"')
+            else:  # Linux
+                os.system(f'xdg-open "{folder_path}"')
+        except Exception as e:
+            messagebox.showerror("Error", f"Cannot open folder: {str(e)}")
+
+    def ensure_admit_cards_dir(self):
+        """Create ADMIT CARDS folder if it does not exist"""
+        if not os.path.exists(self.admit_cards_dir):
+            os.makedirs(self.admit_cards_dir)
+
+    def ensure_certificates_dir(self):
+        """Create CERTIFICATES folder if it does not exist"""
+        if not os.path.exists(self.certificates_dir):
+            os.makedirs(self.certificates_dir)
 
     def show_user_manual(self):
         """Show user manual as a popup window"""
@@ -63,9 +111,8 @@ Date of Birth, Sex, Phone Number.
 
 2. Generating Admit Card
 -----------------------
-- Select a student from the table.
-- Click "Generate Admit Card" to create a PDF admit card.
-- This will open a new window for advanced admit card generation.
+- Click "Generate Admit Card" to open advanced admit card generation.
+- This will open a new window for detailed admit card creation.
 
 3. Generating Certificates
 -------------------------
@@ -84,7 +131,14 @@ Date of Birth, Sex, Phone Number.
 - Click "Export Records" to save the student data to CSV or Excel.
 - Only filtered/visible data will be exported.
 
-6. Help and Documentation
+6. File Menu Options
+-------------------
+- Admit Cards: Opens the folder containing all admit cards
+- Certificates: Opens the folder containing all certificates
+- Help: Opens this user manual
+- Exit: Closes the application
+
+7. Help and Documentation
 ------------------------
 - Use the Help menu for this manual and information about the application.
 """
@@ -125,8 +179,10 @@ Date of Birth, Sex, Phone Number.
         form_frame.pack(fill="x", padx=10, pady=5)
         labels = list(self.columns)
         self.entries = {}
+        
         for i, label in enumerate(labels):
             ttk.Label(form_frame, text=f"{label}:").grid(row=i, column=0, padx=5, pady=5, sticky="e")
+            
             if label == 'Subject':
                 subject_dropdown = ttk.Combobox(form_frame, values=[
                     'Fine Arts', 'Dance', 'Hand Craft', 'Beautician',
@@ -156,16 +212,19 @@ Date of Birth, Sex, Phone Number.
         """Create action buttons with tooltips"""
         btn_frame = ttk.Frame(self.root)
         btn_frame.pack(fill="x", padx=10, pady=5)
+        
         buttons = [
             ("Submit", self.submit_data, "Save the current student record"),
             ("Generate Admit Card", self.generate_admit_card, "Generate PDF admit card for selected student"),
             ("Generate Certificates", self.generate_certificates, "Generate PDF certificates for all students"),
             ("Filter", self.show_filter_dialog, "Filter student records by any column"),
         ]
+        
         for text, command, tooltip in buttons:
             btn = ttk.Button(btn_frame, text=text, command=command)
             btn.pack(side="left", padx=5)
             self.create_tooltip(btn, tooltip)
+        
         export_btn = ttk.Button(btn_frame, text="Export Records", command=self.export_records)
         export_btn.pack(side="right", padx=5)
         self.create_tooltip(export_btn, "Export student records to CSV or Excel")
@@ -175,15 +234,21 @@ Date of Birth, Sex, Phone Number.
         tooltip = tk.Toplevel(self.root)
         tooltip.withdraw()
         tooltip.overrideredirect(True)
+        
         def show_tooltip(event):
-            x, y, _, _ = widget.bbox("insert")
-            x += widget.winfo_rootx() + 25
-            y += widget.winfo_rooty() + 25
-            tooltip.geometry(f"+{x}+{y}")
-            tooltip_label.config(text=text)
-            tooltip.deiconify()
+            try:
+                x, y, _, _ = widget.bbox("insert")
+                x += widget.winfo_rootx() + 25
+                y += widget.winfo_rooty() + 25
+                tooltip.geometry(f"+{x}+{y}")
+                tooltip_label.config(text=text)
+                tooltip.deiconify()
+            except:
+                pass
+        
         def hide_tooltip(event):
             tooltip.withdraw()
+        
         tooltip_label = tk.Label(tooltip, text="", background="#ffffe0", relief="solid", borderwidth=1, padx=2, pady=2)
         tooltip_label.pack()
         widget.bind("<Enter>", show_tooltip)
@@ -193,19 +258,25 @@ Date of Birth, Sex, Phone Number.
         """Create data display section"""
         data_frame = ttk.LabelFrame(self.root, text="Student Records")
         data_frame.pack(fill="both", expand=True, padx=10, pady=5)
+        
         scroll_y = ttk.Scrollbar(data_frame, orient="vertical")
         scroll_x = ttk.Scrollbar(data_frame, orient="horizontal")
+        
         self.tree = ttk.Treeview(data_frame, yscrollcommand=scroll_y.set, xscrollcommand=scroll_x.set)
         scroll_y.config(command=self.tree.yview)
         scroll_x.config(command=self.tree.xview)
+        
         self.tree["columns"] = self.columns
         self.tree["show"] = "headings"
+        
         for col in self.columns:
             self.tree.heading(col, text=col, command=lambda c=col: self.sort_tree(c))
             self.tree.column(col, width=120)
+        
         self.tree.pack(fill="both", expand=True)
         scroll_y.pack(side="right", fill="y")
         scroll_x.pack(side="bottom", fill="x")
+        
         self.load_data()
 
     def load_data(self):
@@ -221,6 +292,7 @@ Date of Birth, Sex, Phone Number.
         """Update Treeview with filtered and sorted data"""
         self.tree.delete(*self.tree.get_children())
         filtered_data = []
+        
         for row in self.student_data:
             match = True
             for i, col in enumerate(self.columns):
@@ -230,9 +302,11 @@ Date of Birth, Sex, Phone Number.
                     break
             if match:
                 filtered_data.append(row)
+        
         if self.sort_column is not None:
             col_index = self.columns.index(self.sort_column)
             filtered_data.sort(key=lambda x: str(x[col_index]), reverse=self.sort_reverse)
+        
         for row in filtered_data:
             self.tree.insert("", "end", values=row)
 
@@ -242,8 +316,10 @@ Date of Birth, Sex, Phone Number.
         filter_dialog.title("Filter Records")
         filter_dialog.geometry("400x300")
         filter_entries = {}
+        
         for i, col in enumerate(self.columns):
             ttk.Label(filter_dialog, text=f"{col}:").grid(row=i, column=0, padx=5, pady=5, sticky="e")
+            
             if col == 'Subject':
                 entry = ttk.Combobox(filter_dialog, values=[''] + [
                     'Fine Arts', 'Dance', 'Hand Craft', 'Beautician',
@@ -265,6 +341,7 @@ Date of Birth, Sex, Phone Number.
                 entry = ttk.Entry(filter_dialog)
                 entry.grid(row=i, column=1, padx=5, pady=5, sticky="ew")
                 entry.insert(0, self.column_filters[col])
+            
             filter_entries[col] = entry
 
         def apply_filters():
@@ -299,11 +376,6 @@ Date of Birth, Sex, Phone Number.
             self.sort_reverse = False
         self.update_treeview()
 
-    def ensure_admit_cards_dir(self):
-        """Create ADMIT CARDS folder if it does not exist"""
-        if not os.path.exists(self.admit_cards_dir):
-            os.makedirs(self.admit_cards_dir)
-
     def submit_data(self):
         """Append data to Excel file with validation"""
         data = {}
@@ -314,22 +386,26 @@ Date of Birth, Sex, Phone Number.
                 data[label] = entry.get()
             else:
                 data[label] = entry.get()
+        
         # Check all fields are filled
         if not all(data.values()):
             messagebox.showerror("Error", "All fields are required!")
             return
+        
         # Validate Date of Birth
         dob = data.get('Date of Birth', '')
         is_valid_dob, dob_error = self.validate_date(dob)
         if not is_valid_dob:
             messagebox.showerror("Error", dob_error)
             return
+        
         # Validate Phone Number
         phone = data.get('Phone Number', '')
         is_valid_phone, phone_error = self.validate_phone(phone)
         if not is_valid_phone:
             messagebox.showerror("Error", phone_error)
             return
+        
         try:
             df_new = pd.DataFrame([data])
             try:
@@ -337,10 +413,13 @@ Date of Birth, Sex, Phone Number.
                 df_all = pd.concat([df_old, df_new], ignore_index=True)
             except FileNotFoundError:
                 df_all = df_new
+            
             with pd.ExcelWriter(EXCEL_FILE, engine='openpyxl') as writer:
                 df_all.to_excel(writer, index=False)
+            
             self.load_data()
             messagebox.showinfo("Success", "Data saved successfully!")
+            
             # Clear form
             for label, entry in self.entries.items():
                 if label == 'Sex':
@@ -362,9 +441,11 @@ Date of Birth, Sex, Phone Number.
         filtered_rows = []
         for item in self.tree.get_children():
             filtered_rows.append(self.tree.item(item)['values'])
+        
         if not filtered_rows:
             messagebox.showwarning("Warning", "No records to export!")
             return
+        
         df = pd.DataFrame(filtered_rows, columns=self.columns)
         filetypes = [("Excel files", "*.xlsx"), ("CSV files", "*.csv")]
         filename = filedialog.asksaveasfilename(
@@ -372,8 +453,10 @@ Date of Birth, Sex, Phone Number.
             filetypes=filetypes,
             defaultextension=".xlsx"
         )
+        
         if not filename:
             return  # User canceled
+        
         try:
             if filename.lower().endswith('.csv'):
                 df.to_csv(filename, index=False)
