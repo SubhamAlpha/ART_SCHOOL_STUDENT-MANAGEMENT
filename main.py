@@ -21,27 +21,23 @@ class StudentApp:
         self.ensure_admit_cards_dir()
         self.ensure_certificates_dir()
 
-        # Define columns
-        self.columns = (
-            'Name', 'Father Name', 'Address', 'Subject', 'Year',
+        # Columns: Added 'Roll No.' and changed 'Father Name' to 'Guardian Name'
+        self.columns = [
+            'Roll No.', 'Name', 'Guardian Name', 'Address', 'Subject', 'Year',
             'Date of Birth', 'Sex', 'Phone Number'
-        )
+        ]
         self.student_data = []
         self.sort_column = None
         self.sort_reverse = False
         self.column_filters = {col: "" for col in self.columns}
 
-        # UI setup
         self.create_menu()
         self.create_form()
         self.create_buttons()
         self.create_data_view()
 
     def create_menu(self):
-        """Create menu bar with File menu containing requested options"""
         menubar = tk.Menu(self.root)
-        
-        # File menu with vertical popup
         file_menu = tk.Menu(menubar, tearoff=0)
         file_menu.add_command(label="Admit Cards", command=self.open_admit_cards_folder)
         file_menu.add_command(label="Certificates", command=self.open_certificates_folder)
@@ -50,51 +46,43 @@ class StudentApp:
         file_menu.add_separator()
         file_menu.add_command(label="Exit", command=self.root.quit)
         menubar.add_cascade(label="File", menu=file_menu)
-        
-        # Help menu
+
         help_menu = tk.Menu(menubar, tearoff=0)
         help_menu.add_command(label="User Manual", command=self.show_user_manual)
         help_menu.add_command(label="About", command=self.show_about)
         menubar.add_cascade(label="Help", menu=help_menu)
-        
+
         self.root.config(menu=menubar)
 
     def open_admit_cards_folder(self):
-        """Open the admit cards folder in file explorer"""
         self.open_folder(self.admit_cards_dir)
 
     def open_certificates_folder(self):
-        """Open the certificates folder in file explorer"""
         self.open_folder(self.certificates_dir)
 
     def open_folder(self, folder_path):
-        """Open folder in system file explorer (cross-platform)"""
         if not os.path.exists(folder_path):
             os.makedirs(folder_path)
             messagebox.showinfo("Folder Created", f"Created folder: {folder_path}")
-        
         try:
             if sys.platform.startswith('win'):
                 os.startfile(folder_path)
-            elif sys.platform.startswith('darwin'):  # macOS
+            elif sys.platform.startswith('darwin'):
                 os.system(f'open "{folder_path}"')
-            else:  # Linux
+            else:
                 os.system(f'xdg-open "{folder_path}"')
         except Exception as e:
             messagebox.showerror("Error", f"Cannot open folder: {str(e)}")
 
     def ensure_admit_cards_dir(self):
-        """Create ADMIT CARDS folder if it does not exist"""
         if not os.path.exists(self.admit_cards_dir):
             os.makedirs(self.admit_cards_dir)
 
     def ensure_certificates_dir(self):
-        """Create CERTIFICATES folder if it does not exist"""
         if not os.path.exists(self.certificates_dir):
             os.makedirs(self.certificates_dir)
 
     def show_user_manual(self):
-        """Show user manual as a popup window"""
         manual = tk.Toplevel(self.root)
         manual.title("User Manual")
         manual.geometry("600x400")
@@ -105,7 +93,7 @@ Student Data Management - User Manual
 
 1. Adding a Student
 -------------------
-- Fill in all fields: Name, Father Name, Address, Subject, Year,
+- Fill in all fields: Roll No., Name, Guardian Name, Address, Subject, Year,
 Date of Birth, Sex, Phone Number.
 - Click "Submit" to save the student to the database.
 
@@ -146,7 +134,6 @@ Date of Birth, Sex, Phone Number.
         text.config(state="disabled")
 
     def show_about(self):
-        """Show about information"""
         messagebox.showinfo(
             "About",
             "Student Data Management\n\n"
@@ -156,7 +143,6 @@ Date of Birth, Sex, Phone Number.
         )
 
     def validate_date(self, date_str):
-        """Validate date of birth format (DD-MM-YYYY) and ensure it is not in the future"""
         try:
             date = datetime.strptime(date_str, "%d-%m-%Y")
             if date > datetime.now():
@@ -166,7 +152,6 @@ Date of Birth, Sex, Phone Number.
             return False, "Date of Birth must be in format DD-MM-YYYY."
 
     def validate_phone(self, phone_str):
-        """Validate phone number contains only digits and is 10 digits long"""
         if not phone_str.isdigit():
             return False, "Phone Number must contain only digits."
         if len(phone_str) != 10:
@@ -174,15 +159,13 @@ Date of Birth, Sex, Phone Number.
         return True, ""
 
     def create_form(self):
-        """Create data entry form with new fields and updated dropdowns"""
         form_frame = ttk.LabelFrame(self.root, text="Student Information")
         form_frame.pack(fill="x", padx=10, pady=5)
         labels = list(self.columns)
         self.entries = {}
-        
+
         for i, label in enumerate(labels):
             ttk.Label(form_frame, text=f"{label}:").grid(row=i, column=0, padx=5, pady=5, sticky="e")
-            
             if label == 'Subject':
                 subject_dropdown = ttk.Combobox(form_frame, values=[
                     'Fine Arts', 'Dance', 'Hand Craft', 'Beautician',
@@ -209,32 +192,30 @@ Date of Birth, Sex, Phone Number.
                 self.entries[label] = entry
 
     def create_buttons(self):
-        """Create action buttons with tooltips"""
         btn_frame = ttk.Frame(self.root)
         btn_frame.pack(fill="x", padx=10, pady=5)
-        
+
         buttons = [
             ("Submit", self.submit_data, "Save the current student record"),
             ("Generate Admit Card", self.generate_admit_card, "Generate PDF admit card for selected student"),
             ("Generate Certificates", self.generate_certificates, "Generate PDF certificates for all students"),
             ("Filter", self.show_filter_dialog, "Filter student records by any column"),
         ]
-        
+
         for text, command, tooltip in buttons:
             btn = ttk.Button(btn_frame, text=text, command=command)
             btn.pack(side="left", padx=5)
             self.create_tooltip(btn, tooltip)
-        
+
         export_btn = ttk.Button(btn_frame, text="Export Records", command=self.export_records)
         export_btn.pack(side="right", padx=5)
         self.create_tooltip(export_btn, "Export student records to CSV or Excel")
 
     def create_tooltip(self, widget, text):
-        """Create a simple tooltip for a widget"""
         tooltip = tk.Toplevel(self.root)
         tooltip.withdraw()
         tooltip.overrideredirect(True)
-        
+
         def show_tooltip(event):
             try:
                 x, y, _, _ = widget.bbox("insert")
@@ -245,54 +226,63 @@ Date of Birth, Sex, Phone Number.
                 tooltip.deiconify()
             except:
                 pass
-        
+
         def hide_tooltip(event):
             tooltip.withdraw()
-        
+
         tooltip_label = tk.Label(tooltip, text="", background="#ffffe0", relief="solid", borderwidth=1, padx=2, pady=2)
         tooltip_label.pack()
         widget.bind("<Enter>", show_tooltip)
         widget.bind("<Leave>", hide_tooltip)
 
     def create_data_view(self):
-        """Create data display section"""
         data_frame = ttk.LabelFrame(self.root, text="Student Records")
         data_frame.pack(fill="both", expand=True, padx=10, pady=5)
-        
+
         scroll_y = ttk.Scrollbar(data_frame, orient="vertical")
         scroll_x = ttk.Scrollbar(data_frame, orient="horizontal")
-        
+
         self.tree = ttk.Treeview(data_frame, yscrollcommand=scroll_y.set, xscrollcommand=scroll_x.set)
         scroll_y.config(command=self.tree.yview)
         scroll_x.config(command=self.tree.xview)
-        
+
         self.tree["columns"] = self.columns
         self.tree["show"] = "headings"
-        
+
         for col in self.columns:
             self.tree.heading(col, text=col, command=lambda c=col: self.sort_tree(c))
             self.tree.column(col, width=120)
-        
+
         self.tree.pack(fill="both", expand=True)
         scroll_y.pack(side="right", fill="y")
         scroll_x.pack(side="bottom", fill="x")
-        
+
         self.load_data()
 
     def load_data(self):
-        """Load data from Excel into Treeview and store for filtering"""
+        # If file does not exist, create it with correct columns
+        if not os.path.exists(EXCEL_FILE):
+            df = pd.DataFrame(columns=self.columns)
+            df.to_excel(EXCEL_FILE, index=False)
         try:
             df = pd.read_excel(EXCEL_FILE)
+            # If columns are missing, add them
+            for col in self.columns:
+                if col not in df.columns:
+                    df[col] = ""
+            # Reorder columns to match self.columns
+            df = df[self.columns]
             self.student_data = df.values.tolist()
             self.update_treeview()
-        except FileNotFoundError:
-            pass
+        except Exception as e:
+            messagebox.showerror("Error", f"Failed to load data: {e}")
+            self.student_data = []
+            self.update_treeview()
 
     def update_treeview(self):
-        """Update Treeview with filtered and sorted data"""
         self.tree.delete(*self.tree.get_children())
         filtered_data = []
-        
+
         for row in self.student_data:
             match = True
             for i, col in enumerate(self.columns):
@@ -302,24 +292,23 @@ Date of Birth, Sex, Phone Number.
                     break
             if match:
                 filtered_data.append(row)
-        
+
         if self.sort_column is not None:
             col_index = self.columns.index(self.sort_column)
             filtered_data.sort(key=lambda x: str(x[col_index]), reverse=self.sort_reverse)
-        
+
         for row in filtered_data:
             self.tree.insert("", "end", values=row)
 
     def show_filter_dialog(self):
-        """Show a popup with filter options for each column"""
         filter_dialog = tk.Toplevel(self.root)
         filter_dialog.title("Filter Records")
-        filter_dialog.geometry("400x300")
+        filter_dialog.geometry("400x350")
         filter_entries = {}
-        
+
         for i, col in enumerate(self.columns):
             ttk.Label(filter_dialog, text=f"{col}:").grid(row=i, column=0, padx=5, pady=5, sticky="e")
-            
+
             if col == 'Subject':
                 entry = ttk.Combobox(filter_dialog, values=[''] + [
                     'Fine Arts', 'Dance', 'Hand Craft', 'Beautician',
@@ -341,7 +330,7 @@ Date of Birth, Sex, Phone Number.
                 entry = ttk.Entry(filter_dialog)
                 entry.grid(row=i, column=1, padx=5, pady=5, sticky="ew")
                 entry.insert(0, self.column_filters[col])
-            
+
             filter_entries[col] = entry
 
         def apply_filters():
@@ -368,7 +357,6 @@ Date of Birth, Sex, Phone Number.
         )
 
     def sort_tree(self, col):
-        """Sort Treeview by column"""
         if self.sort_column == col:
             self.sort_reverse = not self.sort_reverse
         else:
@@ -377,7 +365,6 @@ Date of Birth, Sex, Phone Number.
         self.update_treeview()
 
     def submit_data(self):
-        """Append data to Excel file with validation"""
         data = {}
         for label, entry in self.entries.items():
             if label == 'Sex':
@@ -386,41 +373,39 @@ Date of Birth, Sex, Phone Number.
                 data[label] = entry.get()
             else:
                 data[label] = entry.get()
-        
-        # Check all fields are filled
+
         if not all(data.values()):
             messagebox.showerror("Error", "All fields are required!")
             return
-        
-        # Validate Date of Birth
+
         dob = data.get('Date of Birth', '')
         is_valid_dob, dob_error = self.validate_date(dob)
         if not is_valid_dob:
             messagebox.showerror("Error", dob_error)
             return
-        
-        # Validate Phone Number
+
         phone = data.get('Phone Number', '')
         is_valid_phone, phone_error = self.validate_phone(phone)
         if not is_valid_phone:
             messagebox.showerror("Error", phone_error)
             return
-        
+
         try:
-            df_new = pd.DataFrame([data])
-            try:
+            # Load existing data, add missing columns if needed
+            if os.path.exists(EXCEL_FILE):
                 df_old = pd.read_excel(EXCEL_FILE)
-                df_all = pd.concat([df_old, df_new], ignore_index=True)
-            except FileNotFoundError:
-                df_all = df_new
-            
+                for col in self.columns:
+                    if col not in df_old.columns:
+                        df_old[col] = ""
+                df_old = df_old[self.columns]
+            else:
+                df_old = pd.DataFrame(columns=self.columns)
+            df_new = pd.DataFrame([data], columns=self.columns)
+            df_all = pd.concat([df_old, df_new], ignore_index=True)
             with pd.ExcelWriter(EXCEL_FILE, engine='openpyxl') as writer:
                 df_all.to_excel(writer, index=False)
-            
             self.load_data()
             messagebox.showinfo("Success", "Data saved successfully!")
-            
-            # Clear form
             for label, entry in self.entries.items():
                 if label == 'Sex':
                     entry.set('Male')
@@ -433,19 +418,17 @@ Date of Birth, Sex, Phone Number.
             messagebox.showerror("Error", f"Failed to save data: {str(e)}")
 
     def generate_admit_card(self):
-        """Open the advanced admit card generation window"""
         open_admit_card_window()
 
     def export_records(self):
-        """Export filtered student records to CSV or Excel file"""
         filtered_rows = []
         for item in self.tree.get_children():
             filtered_rows.append(self.tree.item(item)['values'])
-        
+
         if not filtered_rows:
             messagebox.showwarning("Warning", "No records to export!")
             return
-        
+
         df = pd.DataFrame(filtered_rows, columns=self.columns)
         filetypes = [("Excel files", "*.xlsx"), ("CSV files", "*.csv")]
         filename = filedialog.asksaveasfilename(
@@ -453,10 +436,10 @@ Date of Birth, Sex, Phone Number.
             filetypes=filetypes,
             defaultextension=".xlsx"
         )
-        
+
         if not filename:
-            return  # User canceled
-        
+            return
+
         try:
             if filename.lower().endswith('.csv'):
                 df.to_csv(filename, index=False)
@@ -468,7 +451,6 @@ Date of Birth, Sex, Phone Number.
             messagebox.showerror("Error", f"Failed to export records: {str(e)}")
 
     def generate_certificates(self):
-        """Generate certificates for all students in the database"""
         try:
             generate_certificates_from_excel(EXCEL_FILE)
             messagebox.showinfo("Success", "Certificates generated in the CERTIFICATES folder!")

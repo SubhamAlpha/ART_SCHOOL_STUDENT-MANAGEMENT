@@ -5,13 +5,13 @@ from PIL import Image, ImageDraw, ImageFont
 import os
 import re
 
-ADMIT_TEMPLATE = "admit.jpg"  # Path to your admit card template image
+ADMIT_TEMPLATE = "AdmitCard.jpg"  # Path to your admit card template image
 
 class AdmitCardGenerator:
     def __init__(self, root):
         self.root = root
         self.root.title("Admit Card Generator")
-        self.root.geometry("800x600")
+        self.root.geometry("2480x1146")
         self.imported_data = None
         self.current_student_index = 0
         self.create_widgets()
@@ -156,8 +156,8 @@ class AdmitCardGenerator:
         img = Image.open(ADMIT_TEMPLATE).convert("RGB")
         draw = ImageDraw.Draw(img)
         try:
-            font = ImageFont.truetype("arial.ttf", 22)
-            font_bold = ImageFont.truetype("arialbd.ttf", 24)
+            font = ImageFont.truetype("arial.ttf", 48)
+            font_bold = ImageFont.truetype("arialbd.ttf", 48)
         except:
             font = ImageFont.load_default()
             font_bold = font
@@ -165,52 +165,52 @@ class AdmitCardGenerator:
         # --- Alignment based on your marked reference image ---
         # Roll No. (top right, red)
         roll_text = admit_data["Roll No."]
-        roll_x, roll_y = 320, 91
+        roll_x, roll_y = 761, 303
         draw.text((roll_x, roll_y), roll_text, font=font_bold, fill="black")
 
         # Name (Sri/Sm./Km.) (left, black)
         name_text = admit_data["Name"]
-        name_x, name_y = 299, 140
+        name_x, name_y = 680, 421
         draw.text((name_x, name_y), name_text, font=font, fill="black")
 
         # Examination for (left, black)
         exam_for_text = admit_data["Examination for"]
-        exam_for_x, exam_for_y = 311, 187
+        exam_for_x, exam_for_y = 840, 511
         draw.text((exam_for_x, exam_for_y), exam_for_text, font=font, fill="black")
 
         # Year (left, black)
         year_text = admit_data["Year"]
-        year_x, year_y = 170, 237
+        year_x, year_y = 460, 620
         draw.text((year_x, year_y), year_text, font=font, fill="black")
 
         # Subject (left, black)
         subject_text = admit_data["Subject"]
-        subject_x, subject_y = 420, 239
+        subject_x, subject_y = 1001, 621
         draw.text((subject_x, subject_y), subject_text, font=font, fill="black")
 
         # Name of the Centre with Address (left, black)
         centre_text = admit_data["Name of the Centre with Address"]
-        centre_x, centre_y = 140, 323
+        centre_x, centre_y = 380, 800
         draw.text((centre_x, centre_y), centre_text, font=font, fill="black")
 
         # Date (right, black)
         date_text = exam_data["Date"]
-        date_x, date_y = 760, 130
+        date_x, date_y = 1743, 387
         draw.text((date_x, date_y), date_text, font=font, fill="black")
 
         # Time (1st Part) (right, black)
         time1_text = exam_data["Time (1st Part)"]
-        time1_x, time1_y = 780, 209
+        time1_x, time1_y = 1780, 540
         draw.text((time1_x, time1_y), time1_text, font=font, fill="black")
 
         # Time (2nd Part) (right, black)
         time2_text = exam_data["Time (2nd Part)"]
-        time2_x, time2_y = 780, 260
+        time2_x, time2_y = 1799, 680
         draw.text((time2_x, time2_y), time2_text, font=font, fill="black")
 
         # Place (right, black)
         place_text = exam_data["Place"]
-        place_x, place_y = 720, 350
+        place_x, place_y = 1600, 883
         draw.text((place_x, place_y), place_text, font=font, fill="black")
 
         out_dir = os.path.join(os.getcwd(), "ADMIT CARDS")
