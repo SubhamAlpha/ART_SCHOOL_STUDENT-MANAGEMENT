@@ -9,6 +9,8 @@ from datetime import datetime
 import re
 from certificate import generate_certificates_from_excel
 from Admitcard import open_admit_card_window
+from attendance import open_attendance_sheet_window
+import subprocess
 
 EXCEL_FILE = 'student_data.xlsx'
 
@@ -21,7 +23,6 @@ class StudentApp:
         self.ensure_admit_cards_dir()
         self.ensure_certificates_dir()
 
-        # Columns: Added 'Roll No.' and changed 'Father Name' to 'Guardian Name'
         self.columns = [
             'Roll No.', 'Name', 'Guardian Name', 'Address', 'Subject', 'Year',
             'Date of Birth', 'Sex', 'Phone Number'
@@ -35,6 +36,7 @@ class StudentApp:
         self.create_form()
         self.create_buttons()
         self.create_data_view()
+        self.create_top_buttons()
 
     def create_menu(self):
         menubar = tk.Menu(self.root)
@@ -53,6 +55,28 @@ class StudentApp:
         menubar.add_cascade(label="Help", menu=help_menu)
 
         self.root.config(menu=menubar)
+
+    def create_top_buttons(self):
+        top_btn_frame = ttk.Frame(self.root)
+        top_btn_frame.place(relx=1.0, y=0, anchor="ne", x=-10)
+
+        attendance_btn = ttk.Button(top_btn_frame, text="Generate Attendance Sheet", command=open_attendance_sheet_window)
+        attendance_btn.pack(side="right", padx=5, pady=5)
+
+        # Removed the "Results" button as per request
+
+        # Renamed "Marksheet" button to "Generate Results"
+        generate_results_btn = ttk.Button(top_btn_frame, text="Generate Results", command=self.run_marksheet_py)
+        generate_results_btn.pack(side="right", padx=5, pady=5)
+
+    def run_marksheet_py(self):
+        try:
+            if sys.platform.startswith('win'):
+                subprocess.Popen(['python', 'result.py'], shell=True)
+            else:
+                subprocess.Popen(['python3', 'result.py'])
+        except Exception as e:
+            messagebox.showerror("Error", f"Could not run result.py: {e}")
 
     def open_admit_cards_folder(self):
         self.open_folder(self.admit_cards_dir)
@@ -260,17 +284,14 @@ Date of Birth, Sex, Phone Number.
         self.load_data()
 
     def load_data(self):
-        # If file does not exist, create it with correct columns
         if not os.path.exists(EXCEL_FILE):
             df = pd.DataFrame(columns=self.columns)
             df.to_excel(EXCEL_FILE, index=False)
         try:
             df = pd.read_excel(EXCEL_FILE)
-            # If columns are missing, add them
             for col in self.columns:
                 if col not in df.columns:
                     df[col] = ""
-            # Reorder columns to match self.columns
             df = df[self.columns]
             self.student_data = df.values.tolist()
             self.update_treeview()
@@ -391,7 +412,6 @@ Date of Birth, Sex, Phone Number.
             return
 
         try:
-            # Load existing data, add missing columns if needed
             if os.path.exists(EXCEL_FILE):
                 df_old = pd.read_excel(EXCEL_FILE)
                 for col in self.columns:
