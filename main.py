@@ -1,13 +1,11 @@
 import tkinter as tk
 from tkinter import ttk, messagebox, filedialog
 import pandas as pd
-from reportlab.lib.pagesizes import A4
-from reportlab.pdfgen import canvas
 import os
 import sys
 from datetime import datetime
-import re
-from certificate import generate_certificates_from_excel
+
+from certificate import CertificateGeneratorPopup
 from Admitcard import open_admit_card_window
 from attendance import open_attendance_sheet_window
 import subprocess
@@ -22,7 +20,6 @@ class StudentApp:
         self.certificates_dir = os.path.join(os.getcwd(), "CERTIFICATES")
         self.ensure_admit_cards_dir()
         self.ensure_certificates_dir()
-
         self.columns = [
             'Roll No.', 'Name', 'Guardian Name', 'Address', 'Subject', 'Year',
             'Date of Birth', 'Sex', 'Phone Number'
@@ -31,7 +28,6 @@ class StudentApp:
         self.sort_column = None
         self.sort_reverse = False
         self.column_filters = {col: "" for col in self.columns}
-
         self.create_menu()
         self.create_form()
         self.create_buttons()
@@ -48,24 +44,17 @@ class StudentApp:
         file_menu.add_separator()
         file_menu.add_command(label="Exit", command=self.root.quit)
         menubar.add_cascade(label="File", menu=file_menu)
-
         help_menu = tk.Menu(menubar, tearoff=0)
         help_menu.add_command(label="User Manual", command=self.show_user_manual)
         help_menu.add_command(label="About", command=self.show_about)
         menubar.add_cascade(label="Help", menu=help_menu)
-
         self.root.config(menu=menubar)
 
     def create_top_buttons(self):
         top_btn_frame = ttk.Frame(self.root)
         top_btn_frame.place(relx=1.0, y=0, anchor="ne", x=-10)
-
         attendance_btn = ttk.Button(top_btn_frame, text="Generate Attendance Sheet", command=open_attendance_sheet_window)
         attendance_btn.pack(side="right", padx=5, pady=5)
-
-        # Removed the "Results" button as per request
-
-        # Renamed "Marksheet" button to "Generate Results"
         generate_results_btn = ttk.Button(top_btn_frame, text="Generate Results", command=self.run_marksheet_py)
         generate_results_btn.pack(side="right", padx=5, pady=5)
 
@@ -116,43 +105,35 @@ class StudentApp:
 Student Data Management - User Manual
 
 1. Adding a Student
--------------------
 - Fill in all fields: Roll No., Name, Guardian Name, Address, Subject, Year,
 Date of Birth, Sex, Phone Number.
 - Click "Submit" to save the student to the database.
 
 2. Generating Admit Card
------------------------
 - Click "Generate Admit Card" to open advanced admit card generation.
-- This will open a new window for detailed admit card creation.
 
 3. Generating Certificates
--------------------------
 - Click "Generate Certificates" to create PDF certificates for all students.
 - Certificates are saved in the CERTIFICATES folder.
 
 4. Filtering and Sorting
------------------------
 - Click "Filter" to open the filter dialog.
 - Set filters for any column (Name, Subject, Year, etc.).
 - Click "Apply" to filter the table, or "Clear" to remove all filters.
 - Click on any column header to sort by that column.
 
 5. Exporting Records
--------------------
 - Click "Export Records" to save the student data to CSV or Excel.
 - Only filtered/visible data will be exported.
 
 6. File Menu Options
--------------------
 - Admit Cards: Opens the folder containing all admit cards
 - Certificates: Opens the folder containing all certificates
 - Help: Opens this user manual
 - Exit: Closes the application
 
 7. Help and Documentation
-------------------------
-- Use the Help menu for this manual and information about the application.
+- Use the Help menu for this manual and information.
 """
         text.insert("1.0", manual_text)
         text.config(state="disabled")
@@ -187,7 +168,6 @@ Date of Birth, Sex, Phone Number.
         form_frame.pack(fill="x", padx=10, pady=5)
         labels = list(self.columns)
         self.entries = {}
-
         for i, label in enumerate(labels):
             ttk.Label(form_frame, text=f"{label}:").grid(row=i, column=0, padx=5, pady=5, sticky="e")
             if label == 'Subject':
@@ -218,19 +198,16 @@ Date of Birth, Sex, Phone Number.
     def create_buttons(self):
         btn_frame = ttk.Frame(self.root)
         btn_frame.pack(fill="x", padx=10, pady=5)
-
         buttons = [
             ("Submit", self.submit_data, "Save the current student record"),
             ("Generate Admit Card", self.generate_admit_card, "Generate PDF admit card for selected student"),
-            ("Generate Certificates", self.generate_certificates, "Generate PDF certificates for all students"),
+            ("Generate Certificates", self.generate_certificates, "Open certificate generator popup"),
             ("Filter", self.show_filter_dialog, "Filter student records by any column"),
         ]
-
         for text, command, tooltip in buttons:
             btn = ttk.Button(btn_frame, text=text, command=command)
             btn.pack(side="left", padx=5)
             self.create_tooltip(btn, tooltip)
-
         export_btn = ttk.Button(btn_frame, text="Export Records", command=self.export_records)
         export_btn.pack(side="right", padx=5)
         self.create_tooltip(export_btn, "Export student records to CSV or Excel")
@@ -239,7 +216,6 @@ Date of Birth, Sex, Phone Number.
         tooltip = tk.Toplevel(self.root)
         tooltip.withdraw()
         tooltip.overrideredirect(True)
-
         def show_tooltip(event):
             try:
                 x, y, _, _ = widget.bbox("insert")
@@ -250,10 +226,8 @@ Date of Birth, Sex, Phone Number.
                 tooltip.deiconify()
             except:
                 pass
-
         def hide_tooltip(event):
             tooltip.withdraw()
-
         tooltip_label = tk.Label(tooltip, text="", background="#ffffe0", relief="solid", borderwidth=1, padx=2, pady=2)
         tooltip_label.pack()
         widget.bind("<Enter>", show_tooltip)
@@ -262,25 +236,19 @@ Date of Birth, Sex, Phone Number.
     def create_data_view(self):
         data_frame = ttk.LabelFrame(self.root, text="Student Records")
         data_frame.pack(fill="both", expand=True, padx=10, pady=5)
-
         scroll_y = ttk.Scrollbar(data_frame, orient="vertical")
         scroll_x = ttk.Scrollbar(data_frame, orient="horizontal")
-
         self.tree = ttk.Treeview(data_frame, yscrollcommand=scroll_y.set, xscrollcommand=scroll_x.set)
         scroll_y.config(command=self.tree.yview)
         scroll_x.config(command=self.tree.xview)
-
         self.tree["columns"] = self.columns
         self.tree["show"] = "headings"
-
         for col in self.columns:
             self.tree.heading(col, text=col, command=lambda c=col: self.sort_tree(c))
             self.tree.column(col, width=120)
-
         self.tree.pack(fill="both", expand=True)
         scroll_y.pack(side="right", fill="y")
         scroll_x.pack(side="bottom", fill="x")
-
         self.load_data()
 
     def load_data(self):
@@ -303,7 +271,6 @@ Date of Birth, Sex, Phone Number.
     def update_treeview(self):
         self.tree.delete(*self.tree.get_children())
         filtered_data = []
-
         for row in self.student_data:
             match = True
             for i, col in enumerate(self.columns):
@@ -313,11 +280,9 @@ Date of Birth, Sex, Phone Number.
                     break
             if match:
                 filtered_data.append(row)
-
         if self.sort_column is not None:
             col_index = self.columns.index(self.sort_column)
             filtered_data.sort(key=lambda x: str(x[col_index]), reverse=self.sort_reverse)
-
         for row in filtered_data:
             self.tree.insert("", "end", values=row)
 
@@ -326,10 +291,8 @@ Date of Birth, Sex, Phone Number.
         filter_dialog.title("Filter Records")
         filter_dialog.geometry("400x350")
         filter_entries = {}
-
         for i, col in enumerate(self.columns):
             ttk.Label(filter_dialog, text=f"{col}:").grid(row=i, column=0, padx=5, pady=5, sticky="e")
-
             if col == 'Subject':
                 entry = ttk.Combobox(filter_dialog, values=[''] + [
                     'Fine Arts', 'Dance', 'Hand Craft', 'Beautician',
@@ -351,15 +314,12 @@ Date of Birth, Sex, Phone Number.
                 entry = ttk.Entry(filter_dialog)
                 entry.grid(row=i, column=1, padx=5, pady=5, sticky="ew")
                 entry.insert(0, self.column_filters[col])
-
             filter_entries[col] = entry
-
         def apply_filters():
             for col in self.columns:
                 self.column_filters[col] = filter_entries[col].get()
             self.update_treeview()
             filter_dialog.destroy()
-
         def clear_filters():
             for col in self.columns:
                 if col in ('Subject', 'Year', 'Sex'):
@@ -369,7 +329,6 @@ Date of Birth, Sex, Phone Number.
             for col in self.columns:
                 self.column_filters[col] = ""
             self.update_treeview()
-
         ttk.Button(filter_dialog, text="Apply", command=apply_filters).grid(
             row=len(self.columns), column=0, padx=5, pady=10, sticky="e"
         )
@@ -394,23 +353,19 @@ Date of Birth, Sex, Phone Number.
                 data[label] = entry.get()
             else:
                 data[label] = entry.get()
-
         if not all(data.values()):
             messagebox.showerror("Error", "All fields are required!")
             return
-
         dob = data.get('Date of Birth', '')
         is_valid_dob, dob_error = self.validate_date(dob)
         if not is_valid_dob:
             messagebox.showerror("Error", dob_error)
             return
-
         phone = data.get('Phone Number', '')
         is_valid_phone, phone_error = self.validate_phone(phone)
         if not is_valid_phone:
             messagebox.showerror("Error", phone_error)
             return
-
         try:
             if os.path.exists(EXCEL_FILE):
                 df_old = pd.read_excel(EXCEL_FILE)
@@ -444,11 +399,9 @@ Date of Birth, Sex, Phone Number.
         filtered_rows = []
         for item in self.tree.get_children():
             filtered_rows.append(self.tree.item(item)['values'])
-
         if not filtered_rows:
             messagebox.showwarning("Warning", "No records to export!")
             return
-
         df = pd.DataFrame(filtered_rows, columns=self.columns)
         filetypes = [("Excel files", "*.xlsx"), ("CSV files", "*.csv")]
         filename = filedialog.asksaveasfilename(
@@ -456,10 +409,8 @@ Date of Birth, Sex, Phone Number.
             filetypes=filetypes,
             defaultextension=".xlsx"
         )
-
         if not filename:
             return
-
         try:
             if filename.lower().endswith('.csv'):
                 df.to_csv(filename, index=False)
@@ -471,11 +422,7 @@ Date of Birth, Sex, Phone Number.
             messagebox.showerror("Error", f"Failed to export records: {str(e)}")
 
     def generate_certificates(self):
-        try:
-            generate_certificates_from_excel(EXCEL_FILE)
-            messagebox.showinfo("Success", "Certificates generated in the CERTIFICATES folder!")
-        except Exception as e:
-            messagebox.showerror("Error", f"Failed to generate certificates: {str(e)}")
+        CertificateGeneratorPopup(self.root, template_image_path="Certificate.jpg")
 
 if __name__ == "__main__":
     root = tk.Tk()
