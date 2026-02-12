@@ -19,6 +19,7 @@ Excel Integration: Seamlessly reads from .xlsx files to handle bulk student data
 
 📂 Repository Structure
 main.py: The central entry point for the management system.
+also added a help section for description of the product.
 
 Admitcard.py, certificate.py, result.py, attendance.py: Specialized modules for generating specific document types.
 
@@ -40,3 +41,4 @@ pandas (for Excel data handling)
 Pillow (PIL) (for image processing and text overlay)
 
 openpyxl (for reading/writing Excel files)
+
