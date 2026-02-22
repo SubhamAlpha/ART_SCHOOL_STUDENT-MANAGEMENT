@@ -14,8 +14,8 @@ FIELD_COORDS = {
     "Name": (381, 590),      # x, y for Name cell (first row)
     "Year": (1163, 590),      # x, y for Year cell (first row) -- adjust as needed
 }
-ROW_HEIGHT = 106  # Vertical space between rows; adjust as per your template
-MAX_ROWS_PER_SHEET = 26  # Number of students per sheet; adjust as per your template
+ROW_HEIGHT = 106  
+MAX_ROWS_PER_SHEET = 26  
 
 # Font settings (adjust path/size as needed)
 try:
